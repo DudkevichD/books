@@ -3,7 +3,7 @@ from .models import Book, UserBookRelation, Comment, Quote, Shop, Stock
 
 
 class BookSerializer(serializers.ModelSerializer):
-    like_count = serializers.SerializerMethodField()
+    like_count = serializers.IntegerField(read_only=True)
     rate = serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
 
     class Meta:

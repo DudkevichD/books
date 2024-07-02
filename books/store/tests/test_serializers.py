@@ -1,4 +1,4 @@
-from django.db.models import Avg
+from django.db.models import Avg, Count, Case, When
 from django.test import TransactionTestCase
 from django.contrib.auth.models import User
 from store.models import Book, UserBookRelation, Comment, Quote, Shop, Stock
@@ -21,7 +21,8 @@ class BookSerializerTestCase(TransactionTestCase):
         book = Book.objects.create(name='Book 1', price=100, author_name='Author 1', owner=self.user)
         UserBookRelation.objects.create(user=self.user, book=book, like=True, rate=5)
         UserBookRelation.objects.create(user=self.user2, book=book, like=False, rate=3)
-        book = Book.objects.annotate(rate=Avg('userbookrelation__rate')).get(id=book.id)
+        book = Book.objects.annotate(rate=Avg('userbookrelation__rate')).annotate(
+            like_count=Count(Case(When(userbookrelation__like=True, then=1)))).get(id=book.id)
         data = BookSerializer(book).data
         expected_data = {
             'id': book.id,
@@ -36,6 +37,8 @@ class BookSerializerTestCase(TransactionTestCase):
 
     def test_book_serialization_without_owner(self):
         book = Book.objects.create(name='Book 2', price=200, author_name='Author 2')
+        book = Book.objects.annotate(rate=Avg('userbookrelation__rate')).annotate(
+            like_count=Count(Case(When(userbookrelation__like=True, then=1)))).get(id=book.id)
         data = BookSerializer(book).data
         expected_data = {
             'id': book.id,
@@ -44,6 +47,7 @@ class BookSerializerTestCase(TransactionTestCase):
             'author_name': 'Author 2',
             'owner': None,
             'like_count': 0,
+            'rate':  None,
         }
         self.assertEqual(expected_data, data)
 

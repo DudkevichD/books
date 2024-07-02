@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import SimpleRouter
 
+from books import settings
 from store.views import BookViewSet, oauth, UserBookRelationViewSet, CommentViewSet, QuoteViewSet, StockViewSet, \
     ShopViewSet
 
@@ -16,7 +17,11 @@ router.register(r'shop', ShopViewSet)
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('social_django.urls', namespace='social')),
-    path('oauth/', oauth)
+    path('oauth/', oauth),
 ]
-
+if not settings.TESTING:
+    urlpatterns = [
+        *urlpatterns,
+        path("__debug__/", include("debug_toolbar.urls")),
+    ]
 urlpatterns += router.urls

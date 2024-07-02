@@ -1,4 +1,4 @@
-from django.db.models import Avg
+from django.db.models import Avg, Count, Case, When
 from django.shortcuts import render
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -25,7 +25,9 @@ class BookViewSet(OwnerStaffReadOnlyModelViewSet):
     Provides CRUD operations for the Book model.
     Uses custom permissions: only the owner or staff can modify data.
     """
-    queryset = Book.objects.all().select_related('owner').prefetch_related('shops').annotate(rate=Avg('userbookrelation__rate'))
+    queryset = Book.objects.all().select_related('owner').prefetch_related('shops').annotate(
+        rate=Avg('userbookrelation__rate')).annotate(
+        likes_count=Count(Case(When(userbookrelation__like=True, then=1))))
     serializer_class = BookSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
 
