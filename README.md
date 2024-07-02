@@ -50,30 +50,34 @@
 1. **Получение списка книг**:
 http
 GET /api/books/
+
 2. **Создание новой книги**:
 http
 POST /api/books/
 Content-Type: application/json
 
-{
+`{
     "name": "Новая книга",
     "price": "700.00",
     "author_name": "Новый автор"
-}
+}`
+
 3. **Обновление книги**:
 http
 PUT /api/books/{id}/
 Content-Type: application/json
 
-{
+`{
     "name": "Война и мир (обновлено)",
     "price": "800.00",
     "author_name": "Лев Толстой"
 }
+`
 4. **Удаление книги**:
 http
 DELETE /api/books/{id}/
+
 #### Тестирование 
 Для запуска тестов используйте команду:
-bash
-python manage.py test
+
+`python manage.py test`
