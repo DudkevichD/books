@@ -3,13 +3,19 @@ from .models import Book, UserBookRelation, Comment, Quote, Shop, Stock
 
 
 class BookSerializer(serializers.ModelSerializer):
+    like_count = serializers.SerializerMethodField()
+    rate = serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
+
     class Meta:
         model = Book
-        fields = ['id', 'name', 'price', 'author_name', 'owner']
+        fields = ['id', 'name', 'price', 'author_name', 'owner', 'like_count', 'rate']
 
+    def get_like_count(self, instance):
+        return UserBookRelation.objects.filter(book=instance, like=True).count()
 
 class UserBookRelationSerializer(serializers.ModelSerializer):
     book = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all(), pk_field=serializers.IntegerField())
+
     class Meta:
         model = UserBookRelation
         fields = ['id', 'user', 'book', 'like', 'in_bookmarks', 'rate']

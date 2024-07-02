@@ -1,4 +1,5 @@
-from unittest import TestCase
+from django.db.models import Avg
+from django.test import TransactionTestCase
 from django.contrib.auth.models import User
 from store.models import Book, UserBookRelation, Comment, Quote, Shop, Stock
 from store.serializers import BookSerializer, UserBookRelationSerializer, CommentSerializer, QuoteSerializer, \
@@ -7,9 +8,10 @@ from datetime import timezone
 from freezegun import freeze_time
 
 
-class BookSerializerTestCase(TestCase):
+class BookSerializerTestCase(TransactionTestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testcase_user', password='testpassword')
+        self.user2 = User.objects.create_user(username='testcase_user2', password='testpassword')
 
     def tearDown(self):
         User.objects.all().delete()
@@ -17,13 +19,18 @@ class BookSerializerTestCase(TestCase):
 
     def test_book_serialization(self):
         book = Book.objects.create(name='Book 1', price=100, author_name='Author 1', owner=self.user)
+        UserBookRelation.objects.create(user=self.user, book=book, like=True, rate=5)
+        UserBookRelation.objects.create(user=self.user2, book=book, like=False, rate=3)
+        book = Book.objects.annotate(rate=Avg('userbookrelation__rate')).get(id=book.id)
         data = BookSerializer(book).data
         expected_data = {
             'id': book.id,
             'name': 'Book 1',
             'price': '100.00',
             'author_name': 'Author 1',
-            'owner': self.user.id
+            'owner': self.user.id,
+            'like_count': 1,
+            'rate': '4.00'
         }
         self.assertEqual(expected_data, data)
 
@@ -35,12 +42,13 @@ class BookSerializerTestCase(TestCase):
             'name': 'Book 2',
             'price': '200.00',
             'author_name': 'Author 2',
-            'owner': None
+            'owner': None,
+            'like_count': 0,
         }
         self.assertEqual(expected_data, data)
 
 
-class UserBookRelationSerializerTestCase(TestCase):
+class UserBookRelationSerializerTestCase(TransactionTestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testcase_user', password='testpassword')
         self.book = Book.objects.create(name='Book 1', price=100, author_name='Author 1')
@@ -52,7 +60,7 @@ class UserBookRelationSerializerTestCase(TestCase):
 
     def test_book_relation_serialization(self):
         book_relation = UserBookRelation.objects.create(user=self.user, book=self.book, like=True, in_bookmarks=True,
-                                                    rate=5)
+                                                        rate=5)
         data = UserBookRelationSerializer(book_relation).data
         expected_data = {
             'id': book_relation.id,
@@ -78,7 +86,7 @@ class UserBookRelationSerializerTestCase(TestCase):
         self.assertEqual(expected_data, data)
 
 
-class CommentSerializerTestCase(TestCase):
+class CommentSerializerTestCase(TransactionTestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testcase_user', password='testpassword')
         self.book = Book.objects.create(name='Book 1', price=100, author_name='Author 1')
@@ -114,7 +122,7 @@ class CommentSerializerTestCase(TestCase):
         self.assertEqual(expected_data, data)
 
 
-class QuoteSerializerTestCase(TestCase):
+class QuoteSerializerTestCase(TransactionTestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testcase_user', password='testpassword')
         self.book = Book.objects.create(name='Book 1', price=100, author_name='Author 1')
@@ -149,7 +157,7 @@ class QuoteSerializerTestCase(TestCase):
         self.assertEqual(expected_data, data)
 
 
-class ShopSerializerTestCase(TestCase):
+class ShopSerializerTestCase(TransactionTestCase):
     def tearDown(self):
         Shop.objects.all().delete()
         Book.objects.all().delete()
@@ -177,7 +185,7 @@ class ShopSerializerTestCase(TestCase):
         self.assertEqual(expected_data, data)
 
 
-class StockSerializerTestCase(TestCase):
+class StockSerializerTestCase(TransactionTestCase):
     def setUp(self):
         self.shop = Shop.objects.create(name='Shop 1')
         self.book = Book.objects.create(name='Book 1', price=100, author_name='Author 1')

@@ -1,6 +1,7 @@
 import json
 
 from django.contrib.auth.models import User
+from django.db.models import Avg
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -68,15 +69,16 @@ class BookTests(APITestCase):
     def test_get_books(self):
         url = reverse('book-list')
         response = self.client.get(url, format='json')
-        books = Book.objects.all()
+        books = Book.objects.all().annotate(rate=Avg('userbookrelation__rate')).order_by('id')
         serializer_data = BookSerializer(books, many=True).data
         self.assertEqual(serializer_data, response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_single_book(self):
         url = reverse('book-detail', args=[self.book1.id])
+        book = Book.objects.filter(id=self.book1.id).annotate(rate=Avg('userbookrelation__rate')).first()
         response = self.client.get(url, format='json')
-        serializer_data = BookSerializer(self.book1).data
+        serializer_data = BookSerializer(book).data
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, serializer_data)
 
