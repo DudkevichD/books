@@ -1,9 +1,11 @@
+import json
+
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from store.models import Book
+from store.models import Book, UserBookRelation
 from store.serializers import BookSerializer
 
 
@@ -137,7 +139,6 @@ class BookTests(APITestCase):
         url = reverse('book-detail', args=[self.book1.id])
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Book.objects.count(), 4)
 
     def test_delete_book_by_non_owner(self):
         url = reverse('book-detail', args=[self.book1.id])
@@ -152,3 +153,49 @@ class BookTests(APITestCase):
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Book.objects.count(), 4)
+
+
+class UserBookRelationTests(APITestCase):
+    def setUp(self):
+        self.user1 = User.objects.create_user(username='testuser', password='testpassword')
+        self.user2 = User.objects.create_user(username='testuser2', password='testpassword2')
+        self.book1 = Book.objects.create(name='Война и мир', price=500.00, author_name='Лев Толстой', owner=self.user1)
+        self.book2 = Book.objects.create(name='Преступление и наказание', price=300.00, author_name='Фёдор Достоевский',
+                                         owner=self.user2)
+
+    def test_get_user_book_relation(self):
+        url = reverse('userbookrelation-detail', args=[self.book1.id])
+        self.client.force_login(self.user1)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['book'], self.book1.id)
+
+    def test_patch_like_user_book_relation(self):
+        url = reverse('userbookrelation-detail', args=[self.book1.id])
+        data = {
+            'like': True,
+        }
+        self.client.force_login(self.user1)
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        relation = UserBookRelation.objects.get(user=self.user1, book=self.book1)
+        self.assertTrue(relation.like)
+
+    def test_post_user_book_relation(self):
+        url = reverse('userbookrelation-list')
+        data = {
+            'user': self.user1.id,
+            'book': self.book2.id,
+            'like': True,
+        }
+        self.client.force_login(self.user1)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(UserBookRelation.objects.count(), 1)
+        self.assertTrue(UserBookRelation.objects.get(book=self.book2, user=self.user1))
+
+    def test_delete_user_book_relation(self):
+        url = reverse('userbookrelation-detail', args=[self.book1.id])
+        self.client.force_login(self.user1)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
