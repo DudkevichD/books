@@ -84,8 +84,8 @@ Content-Type: application/json
     "name": "Война и мир (обновлено)",
     "price": "800.00",
     "author_name": "Лев Толстой"
-}
-`
+}`
+
 4. **Удаление книги**:
 http
 DELETE /api/books/{id}/
